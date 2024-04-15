@@ -34,8 +34,8 @@ class Charge:
         chargeEnergyRecovered: float,
         chargeEndStatus: Optional[str] = None,
     ):
-        self.chargeStartDate = datetime.strptime(chargeStartDate, "%Y-%m-%dT%H:%M:%SZ")
-        self.chargeEndDate = datetime.strptime(chargeEndDate, "%Y-%m-%dT%H:%M:%SZ")
+        self.chargeStartDate = datetime.strptime(chargeStartDate, "%Y-%m-%dT%H:%M:%S%z")
+        self.chargeEndDate = datetime.strptime(chargeEndDate, "%Y-%m-%dT%H:%M:%S%z")
         self.chargeDuration = chargeDuration
         self.chargeStartBatteryLevel = chargeStartBatteryLevel
         self.chargeEndBatteryLevel = chargeEndBatteryLevel
