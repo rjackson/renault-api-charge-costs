@@ -114,8 +114,8 @@ def enrich_charge(charge: Charge) -> EnrichedCharge:
         else 0
     )
     return {
-        "chargeStartDate": charge.chargeStartDate,
-        "chargeEndDate": charge.chargeEndDate,
+        "chargeStartDate": charge.chargeStartDate.replace(tzinfo=None),
+        "chargeEndDate": charge.chargeEndDate.replace(tzinfo=None),
         "chargeDuration": charge.chargeDuration,
         "chargeStartBatteryLevel": charge.chargeStartBatteryLevel,
         "chargeEndBatteryLevel": charge.chargeEndBatteryLevel,
@@ -158,6 +158,7 @@ async def main():
             lambda x: Charge(**x),
             ((await vehicle.get_charges(start, end)).raw_data["charges"]),
         )
+        charge_history = sorted(charge_history, key=lambda x: x.chargeStartDate)        
 
         enriched_charges = map(enrich_charge, charge_history)
 
