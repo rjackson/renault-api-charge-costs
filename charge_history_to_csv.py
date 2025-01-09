@@ -7,11 +7,6 @@ import asyncio
 import os
 import requests
 
-username = os.environ.get("RENAULT_USERNAME")
-password = os.environ.get("RENAULT_PASSWORD")
-if not username or not password:
-    raise ValueError("Username or password is missing")
-
 HOME_CHARGER_WATTAGE = 2.2  # kW
 
 
@@ -76,6 +71,22 @@ def calculate_charge_cost(
     return cost
 
 
+def get_pricing(start: datetime, end: datetime) -> Dict[datetime, float]:
+    if start.replace(tzinfo=None) > datetime(2024, 9, 2) and end.replace(tzinfo=None) < datetime(2024, 9, 9):
+        return get_fixed_pricing(start, end)
+
+    return get_agile_pricing(start, end)
+
+
+def get_fixed_pricing(start: datetime, end: datetime) -> Dict[datetime, float]:
+    start = start.replace(minute=start.minute // 30 * 30, second=0, microsecond=0)
+    half_hours = [
+        start + timedelta(minutes=30 * i)
+        for i in range(int((end - start).total_seconds() // 1800) + 1)
+    ]
+    return {start.replace(tzinfo=None).isoformat(): 25.01 for start in half_hours}
+
+
 def get_agile_pricing(start: datetime, end: datetime) -> Dict[datetime, float]:
     # Construct the URL
     PRODUCT_CODE = "AGILE-18-02-21"
@@ -125,7 +136,7 @@ def enrich_charge(charge: Charge) -> EnrichedCharge:
         "efficiency": efficiency,
         "cost": calculate_charge_cost(
             charge,
-            get_agile_pricing(
+            get_pricing(
                 charge.chargeStartDate,
                 charge.chargeEndDate,
             ),
@@ -134,6 +145,11 @@ def enrich_charge(charge: Charge) -> EnrichedCharge:
 
 
 async def main():
+    username = os.environ.get("RENAULT_USERNAME")
+    password = os.environ.get("RENAULT_PASSWORD")
+    if not username or not password:
+        raise ValueError("Username or password is missing")
+
     async with aiohttp.ClientSession() as websession:
         client = RenaultClient(websession=websession, locale="en_GB")
         await client.session.login(username, password)
@@ -158,7 +174,7 @@ async def main():
             lambda x: Charge(**x),
             ((await vehicle.get_charges(start, end)).raw_data["charges"]),
         )
-        charge_history = sorted(charge_history, key=lambda x: x.chargeStartDate)        
+        charge_history = sorted(charge_history, key=lambda x: x.chargeStartDate)
 
         enriched_charges = map(enrich_charge, charge_history)
 
@@ -185,5 +201,6 @@ async def main():
             writer.writerows(enriched_charges)
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
