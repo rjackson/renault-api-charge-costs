@@ -119,11 +119,12 @@ def get_agile_pricing(start: datetime, end: datetime) -> Dict[datetime, float]:
 
 def enrich_charge(charge: Charge) -> EnrichedCharge:
     homeEnergyConsumed = charge.chargeDuration / 60 * HOME_CHARGER_WATTAGE
-    efficiency = (
-        (charge.chargeEnergyRecovered / homeEnergyConsumed * 100)
-        if charge.chargeEnergyRecovered > 0
-        else 0
-    )
+
+    if homeEnergyConsumed > 0:
+        efficiency = (charge.chargeEnergyRecovered / homeEnergyConsumed) * 100
+    else:
+        efficiency = 0
+
     return {
         "chargeStartDate": charge.chargeStartDate.replace(tzinfo=None),
         "chargeEndDate": charge.chargeEndDate.replace(tzinfo=None),
